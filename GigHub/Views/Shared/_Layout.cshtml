@@ -1,0 +1,141 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewBag.Title</title>
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,700" rel="stylesheet">
+    <link rel="icon" type="image/gif/png" href="Content/logo.png">
+    @Styles.Render("~/Content/css")
+    @Styles.Render("~/Content/less")
+    @Scripts.Render("~/bundles/modernizr")
+
+</head>
+<body>
+    <div class="navbar navbar-inverse navbar-fixed-top">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                @Html.ActionLink("GigHub", "Index", "Home", new { area = "" }, new { @class = "navbar-brand" })
+            </div>
+            <div class="navbar-collapse collapse">
+                <ul class="nav navbar-nav">
+                    <li>@Html.ActionLink("Add a Gig", "Create", "Gigs")</li>
+                </ul>
+                @Html.Partial("_LoginPartial")
+            </div>
+        </div>
+    </div>
+    <div class="container body-content">
+        @RenderBody()
+        <hr />
+        <footer>
+            <p>&copy; @DateTime.Now.Year - My ASP.NET Application</p>
+        </footer>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="myModal" role="dialog">
+        <div class="modal-dialog">
+
+            <!-- Modal content-->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">GigHub - Error</h4>
+                </div>
+                <div class="modal-body">
+                    <p id="ErrorMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    @Scripts.Render("~/bundles/lib")
+    @Scripts.Render("~/bundles/app")
+    @RenderSection("scripts", required: false)
+    <script type="text/x-template" id="notifications-template">
+        <ul class="notifications">
+            <% 
+                _.each(notifications, function(notification){
+                    if(notification.type ==1){ %>
+                        <li>
+                            <span class="highlight"><%= notification.gig.artist.name %></span>
+                                has canceled the gig at <%= notification.gig.venue %> 
+                                at  <%= moment(notification.gig.dateTime).format("D MMM HH:mm") %>
+                        </li>
+                    <%} 
+                    
+                    if(notification.type ==2){
+                        
+                        var venueMessage="";
+                        if(notification.originalVenue != notification.gig.venue)
+                        {
+                            venueMessage = "Venue from " +
+                                            notification.originalVenue +
+                                            " to " + notification.gig.venue;
+                        }
+                        var dateMessage="";
+                        if(notification.originalDateTime != notification.gig.dateTime)
+                        {
+                            dateMessage = "Date from " +
+                                            moment(notification.originalDateTime).format("D MMM HH:mm") +
+                                            " to " + moment(notification.gig.dateTime).format("D MMM HH:mm");
+                        }
+                        var message =[venueMessage, dateMessage];
+                     %>
+                    <li>
+                        <span class="highlight"><%= notification.gig.artist.name %></span>
+                        has changed the gig at <%= notification.gig.venue %>
+                        at  <%= venueMessage %> <%= dateMessage %>
+                    </li>
+                    <%} 
+                })
+             %>
+        </ul>
+    </script>
+    <script>
+        $(document).ready(function () {
+                
+            $.getJSON("/api/notifications", function (notifications) {
+                if (notifications.length == 0)
+                    return;
+                $(".js-notifications-count")
+                    .text(notifications.length)
+                    .removeClass("hide")
+                    .addClass("animated bounceInDown");
+
+                $(".notifications").popover({
+                    html: true,
+                    title: "Notifications",
+                    content: function ()
+                    {
+                        var compiled = _.template($("#notifications-template").html());
+                        return compiled({ notifications: notifications });
+                    },
+                    placement: "bottom",
+                    template: '<div class="popover popover-notifications" role="tooltip"><div class="arrow"></div><h3 class="popover-title"></h3><div class="popover-content"></div></div>'
+                }).on("shown.bs.popover", function () {
+                    $.post("/api/notifications")
+                    .done(function () {
+                        $(".js-notifications-count").text("");
+                    })
+                    .fail(function (jqXHR, textStatus, err) {
+                        console.log("Something went wrong");
+                    });
+                });
+            });
+
+            
+        });
+    </script>
+</body>
+</html>
